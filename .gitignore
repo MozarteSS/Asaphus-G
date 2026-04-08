@@ -1,0 +1,4 @@
+gsas2_env/
+__pycache__/
+*.pyc
+*.gpx
