@@ -1,5 +1,7 @@
-gsas2_env/
+.venv_gsas2/
 __pycache__/
 *.pyc
 *.gpx
+*.lst
 project/
+input/

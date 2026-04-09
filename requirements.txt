@@ -1,4 +1,7 @@
+numpy
 pandas
+pymatgen
+requests
 scipy
 
 # GSAS-II ja vem instalado no ambiente (via buildtools).

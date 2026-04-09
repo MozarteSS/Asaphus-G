@@ -1,14 +1,17 @@
 import os
 import sys
 
-# OBS: Ative o ambiente e use PYTHONPATH antes de rodar:
-#   source gsas2_env/bin/activate
-#   PYTHONPATH="./gsas2_env/GSAS-II" python Workflow_GSAS-II.py
+# Adiciona o caminho do GSAS-II ao sys.path automaticamente
+_gsas2_path = os.path.join(os.path.dirname(__file__), os.pardir, ".venv_gsas2", "GSAS-II")
+_gsas2_path = os.path.abspath(_gsas2_path)
+if _gsas2_path not in sys.path:
+    sys.path.insert(0, _gsas2_path)
+
 try:
     from GSASII import GSASIIscriptable as G2sc
 except ImportError:
     print("Erro: GSASIIscriptable não encontrado.")
-    print("Execute com: PYTHONPATH=\"./gsas2_env/GSAS-II\" python Workflow_GSAS-II.py")
+    print(f"Caminho verificado: {_gsas2_path}")
     sys.exit()
 
 def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_projeto):
@@ -22,7 +25,7 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     
     # 2. Carrega os Dados (Espectro DRX e Parâmetros do Difratômetro)
     # arquivo_inst contém as configs do seu aparelho (ex: tubo de Cu, fendas, etc)
-    hist = gpx.add_histogram(arquivo_drx, arquivo_inst)
+    hist = gpx.add_powder_histogram(arquivo_drx, arquivo_inst)
     
     # 3. Carrega a Fase Estrutural (ex: Hematita ou Magnetita)
     fase = gpx.add_phase(arquivo_cif, phasename="Fase_Principal", histograms=[hist])
@@ -32,12 +35,12 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     # PASSO 1: Escala e Background
     # Alinha a altura geral do gráfico e ajusta o ruído de fundo (polinômio)
     print("Passo 1: Refinando Escala e Background...")
-    gpx.do_refinements([{"set": {"Background": True, "PhaseFractions": True}}])
+    gpx.do_refinements([{"set": {"Background": True, "Scale": True}}])
     
     # PASSO 2: Deslocamento da Amostra (Zero-shift)
     # Alinha a posição horizontal dos picos (corrige altura da amostra no porta-amostras)
     print("Passo 2: Refinando Deslocamento da Amostra (Sample Displacement)...")
-    gpx.do_refinements([{"set": {"SamplePos": True}}])
+    gpx.do_refinements([{"set": {"Sample Parameters": ["DisplaceX", "DisplaceY"]}}])
     
     # PASSO 3: Parâmetros de Rede (Célula Unitária)
     # Ajusta o tamanho da célula a, b, c. Essencial para acomodar substituições iônicas.
@@ -47,13 +50,16 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     # PASSO 4: Perfil de Pico (Tamanho de Cristalito e Microdeformação)
     # Ajusta o alargamento dos picos. Crucial para nanomateriais.
     print("Passo 4: Refinando Perfil (Tamanho e Microstrain)...")
-    gpx.do_refinements([{"set": {"Size": True, "Microstrain": True}}])
+    gpx.do_refinements([{"set": {
+        "Size": {"type": "isotropic", "refine": True},
+        "Mustrain": {"type": "isotropic", "refine": True}
+    }}])
     
     # PASSO 5: Parâmetros Estruturais (Coordenadas Atômicas)
     # O passo mais sensível. Move os átomos dentro da célula.
     # Em óxidos de ferro rotineiros, às vezes este passo é omitido se a qualidade do DRX for baixa.
     print("Passo 5: Refinando Posições Atômicas...")
-    gpx.do_refinements([{"set": {"Atoms": True}}])
+    gpx.do_refinements([{"set": {"Atoms": {"all": "XU"}}}])
     
     # --- FIM DO WORKFLOW ---
     
@@ -61,13 +67,13 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     gpx.save(nome_projeto)
     
     # 5. Extração e Relatório dos Resultados Estatísticos
-    resultados = hist.get_recent_refinement_results()
-    fator_rwp = resultados.get('Rwp', 'N/A')
-    fator_gof = resultados.get('GOF', 'N/A') # Goodness of fit (Chi-quadrado)
-    
+    resultados = hist.residuals
+    fator_rwp = resultados.get('wR', 'N/A')
+    fator_rwpb = resultados.get('wRb', 'N/A')
+
     print("\n--- Resultados Finais ---")
-    print(f"Fator Rwp (Desejável < 10%): {fator_rwp}%")
-    print(f"Chi-quadrado (Desejável próximo a 1): {fator_gof}")
+    print(f"Fator wR (Desejável < 10%): {fator_rwp}%")
+    print(f"Fator wRb: {fator_rwpb}%")
     print(f"Projeto salvo com sucesso em: {nome_projeto}")
 
 # ==========================================
