@@ -2,10 +2,10 @@
 # cria os diretórios do projeto
 import os
 def dir_project(project_name):
-    path_ref = f"project/{project_name}/ref"
+    path_ref = f"projects/{project_name}/ref"
     if not os.path.exists(path_ref):
         os.makedirs(path_ref)
-    path_ = f"project/{project_name}"
+    path_ = f"projects/{project_name}"
     return path_, path_ref
 
 
