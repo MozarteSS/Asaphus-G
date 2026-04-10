@@ -20,8 +20,10 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     """
     print(f"--- Iniciando Projeto: {nome_projeto} ---")
     
-    # 1. Cria o projeto do GSAS-II (.gpx)
-    gpx = G2sc.G2Project(newgpx=nome_projeto)
+    # 1. Cria o projeto do GSAS-II (.gpx) já no diretório de resultados
+    results_dir = f"./projects/{nome_projeto}/results"
+    os.makedirs(results_dir, exist_ok=True)
+    gpx = G2sc.G2Project(newgpx=f"{results_dir}/{nome_projeto}")
     
     # 2. Carrega os Dados (Espectro DRX e Parâmetros do Difratômetro)
     # arquivo_inst contém as configs do seu aparelho (ex: tubo de Cu, fendas, etc)
@@ -64,8 +66,7 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     # --- FIM DO WORKFLOW ---
     
     # 4. Salva o projeto final
-    os.makedirs(f"./projects/{nome_projeto}/results", exist_ok=True)
-    gpx.save(f"./projects/{nome_projeto}/results/{nome_projeto}.gpx")
+    gpx.save()
     
     # 5. Extração e Relatório dos Resultados Estatísticos
     resultados = hist.residuals
@@ -75,7 +76,18 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     print("\n--- Resultados Finais ---")
     print(f"Fator wR (Desejável < 10%): {fator_rwp}%")
     print(f"Fator wRb: {fator_rwpb}%")
-    print(f"Projeto salvo com sucesso em: ./projects/{nome_projeto}/results/")
+    print(f"Projeto salvo com sucesso em: {results_dir}/")
+
+    # 6. Retorna dados para plotagem
+    return {
+        "x": hist.getdata("X"),
+        "yobs": hist.getdata("Yobs"),
+        "ycalc": hist.getdata("Ycalc"),
+        "ybkg": hist.getdata("Background"),
+        "diff": hist.getdata("Residual"),
+        "wR": fator_rwp,
+        "wRb": fator_rwpb,
+    }
 
 # ==========================================
 # Exemplo de uso prático
