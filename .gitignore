@@ -5,4 +5,4 @@ __pycache__/
 *.bak*
 *.lst
 projects/
-input/
+inputs/

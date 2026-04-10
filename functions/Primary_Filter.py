@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
+from scipy.spatial.distance import cosine
 from pymatgen.core import Structure
 from pymatgen.analysis.diffraction.xrd import XRDCalculator
 
@@ -67,7 +68,7 @@ def simular_padrao_xrd(arquivo_cif, two_theta_grid, sigma=0.1):
     return intensidade_sim
 
 
-def primary_filter(input_file="minha_amostra_bancada.txt", ref_dir="ref/"):
+def primary_filter(correlation="pearson", input_file="minha_amostra_bancada.txt", ref_dir="ref/"):
 
     # 1. Carrega a amostra real (TXT com 2θ, intensidade)
     theta_amostra, int_amostra = carregar_amostra(input_file)
@@ -82,8 +83,13 @@ def primary_filter(input_file="minha_amostra_bancada.txt", ref_dir="ref/"):
         try:
             int_sim = simular_padrao_xrd(arquivo_cif, theta_amostra)
             ref_int_norm = (int_sim - int_sim.min()) / (int_sim.max() or 1.0)
-
-            score, _ = pearsonr(amostra_int_norm, ref_int_norm)
+            if correlation == "pearson":
+                score, _ = pearsonr(amostra_int_norm, ref_int_norm)
+            elif correlation == "cosine":
+                score = 1 - cosine(amostra_int_norm, ref_int_norm)
+            else: 
+                print(f"Aviso: Correlação '{correlation}' não reconhecida. Usando Pearson por padrão.")
+                score, _ = pearsonr(amostra_int_norm, ref_int_norm)
             resultados.append({"nome": nome, "score": score, "ref_int_norm": ref_int_norm})
         except Exception as e:
             print(f"Aviso: Não foi possível processar {nome}: {e}")

@@ -17,21 +17,30 @@ except ImportError:
 def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_projeto):
     """
     Executa o workflow seguro de refinamento de Rietveld passo a passo.
+    Aceita uma ou mais fases (arquivo_cif pode ser uma string ou lista de strings).
+    Calcula o percentual de cada fase ao final.
     """
     print(f"--- Iniciando Projeto: {nome_projeto} ---")
-    
+
     # 1. Cria o projeto do GSAS-II (.gpx) já no diretório de resultados
     results_dir = f"./projects/{nome_projeto}/results"
     os.makedirs(results_dir, exist_ok=True)
     gpx = G2sc.G2Project(newgpx=f"{results_dir}/{nome_projeto}")
-    
+
     # 2. Carrega os Dados (Espectro DRX e Parâmetros do Difratômetro)
-    # arquivo_inst contém as configs do seu aparelho (ex: tubo de Cu, fendas, etc)
     hist = gpx.add_powder_histogram(arquivo_drx, arquivo_inst)
-    
-    # 3. Carrega a Fase Estrutural (ex: Hematita ou Magnetita)
-    fase = gpx.add_phase(arquivo_cif, phasename="Fase_Principal", histograms=[hist])
-    
+
+    # 3. Carrega as Fases Estruturais
+    if isinstance(arquivo_cif, str):
+        arquivos_cif = [arquivo_cif]
+    else:
+        arquivos_cif = arquivo_cif
+    fases = []
+    for cif in arquivos_cif:
+        nome_fase = os.path.splitext(os.path.basename(cif))[0]
+        fase = gpx.add_phase(cif, phasename=nome_fase, histograms=[hist])
+        fases.append(fase)
+
     # --- INÍCIO DO WORKFLOW DE REFINAMENTO ---
     
     # PASSO 1: Escala e Background
@@ -67,7 +76,7 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     
     # 4. Salva o projeto final
     gpx.save()
-    
+
     # 5. Extração e Relatório dos Resultados Estatísticos
     resultados = hist.residuals
     fator_rwp = resultados.get('wR', 'N/A')
@@ -78,7 +87,16 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     print(f"Fator wRb: {fator_rwpb}%")
     print(f"Projeto salvo com sucesso em: {results_dir}/")
 
-    # 6. Retorna dados para plotagem
+    # 6. Calcula e exibe o percentual de cada fase
+    try:
+        wt_fracs = gpx.get_wt_fractions(hist)
+        print("\nPercentual de cada fase na amostra:")
+        for fase_nome, wt in wt_fracs.items():
+            print(f"- {fase_nome}: {wt:.2f}%")
+    except Exception as e:
+        print("Não foi possível calcular o percentual das fases:", e)
+
+    # 7. Retorna dados para plotagem e percentuais
     return {
         "x": hist.getdata("X"),
         "yobs": hist.getdata("Yobs"),
@@ -87,6 +105,7 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
         "diff": hist.getdata("Residual"),
         "wR": fator_rwp,
         "wRb": fator_rwpb,
+        "percentuais_fases": wt_fracs if 'wt_fracs' in locals() else None,
     }
 
 # ==========================================
