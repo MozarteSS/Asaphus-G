@@ -5,9 +5,10 @@
 Pipeline de análise de difração de raios X (XRD) que automatiza:
 
 1. **Download de referências** — busca arquivos CIF do banco [Crystallography Open Database (COD)](http://www.crystallography.net/cod/).
-4. **útil** o RRUFF disponibiliza o download dos dados espectrais reais (o sinal de difração medido).
 2. **Filtro primário** — compara o difratograma experimental com padrões simulados via `pymatgen` usando correlação de Pearson, gerando um ranking de fases candidatas.
 3. **Refinamento de Rietveld** — executa refinamento sequencial (escala, background, deslocamento, célula unitária, perfil de pico e posições atômicas) usando [GSAS-II](https://advancedphotonsource.github.io/GSAS-II-tutorials/) via scripting.
+
+**útil** o RRUFF (https://www.rruff.net/) disponibiliza o download dos dados espectrais reais (o sinal de difração medido).
 
 ### Estrutura do projeto
 
