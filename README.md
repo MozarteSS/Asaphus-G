@@ -5,6 +5,7 @@
 Pipeline de análise de difração de raios X (XRD) que automatiza:
 
 1. **Download de referências** — busca arquivos CIF do banco [Crystallography Open Database (COD)](http://www.crystallography.net/cod/).
+4. **útil** o RRUFF disponibiliza o download dos dados espectrais reais (o sinal de difração medido).
 2. **Filtro primário** — compara o difratograma experimental com padrões simulados via `pymatgen` usando correlação de Pearson, gerando um ranking de fases candidatas.
 3. **Refinamento de Rietveld** — executa refinamento sequencial (escala, background, deslocamento, célula unitária, perfil de pico e posições atômicas) usando [GSAS-II](https://advancedphotonsource.github.io/GSAS-II-tutorials/) via scripting.
 
@@ -14,8 +15,11 @@ Pipeline de análise de difração de raios X (XRD) que automatiza:
 ReDifraX/
 ├── run.ipynb                          # Notebook principal de execução
 ├── requirements.txt                   # Dependências Python extras
-├── input/                             # Dados experimentais (.txt, .prm)
-├── project/                           # Projetos criados em tempo de execução
+├── inputs/                            # Dados experimentais (.txt, .prm)
+├── projects/                          # Projetos criados em tempo de execução
+│   └── <nome>/
+│       ├── ref/                       # CIFs de referência baixados do COD
+│       └── results/                   # Projeto .gpx e resultados do refinamento
 └── functions/
     ├── Diretories_Downloads.py        # Criação de diretórios e download de CIFs
     ├── Primary_Filter.py              # Simulação XRD e ranking por correlação
@@ -71,7 +75,7 @@ python -c "import pandas; import scipy; print('pandas/scipy OK')"
 
 ### 6. Executar
 
-Coloque seu difratograma experimental (formato RRUFF: `2θ, intensidade`) na pasta `input/` e execute o notebook:
+Coloque seu difratograma experimental (formato RRUFF: `2θ, intensidade`) na pasta `inputs/` e execute o notebook:
 
 ```bash
 source .venv_gsas2/bin/activate
@@ -80,8 +84,9 @@ jupyter notebook run.ipynb
 
 O notebook segue o fluxo:
 
-1. Cria o diretório do projeto (`project/<nome>/ref/`).
+1. Cria o diretório do projeto (`projects/<nome>/ref/`).
 2. Baixa CIFs de referência do COD (hematita, magnetita, maghemita, goethita, wüstita, ferro metálico).
 3. Executa o filtro primário e exibe o ranking de similaridade.
 4. Plota o difratograma experimental sobreposto à melhor referência.
-5. Executa o refinamento de Rietveld via GSAS-II e reporta os fatores wR/wRb.
+5. Executa o refinamento de Rietveld via GSAS-II e salva o projeto `.gpx` em `projects/<nome>/results/`.
+6. Reporta os fatores de qualidade wR e wRb.

@@ -64,7 +64,8 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     # --- FIM DO WORKFLOW ---
     
     # 4. Salva o projeto final
-    gpx.save(nome_projeto)
+    os.makedirs(f"./projects/{nome_projeto}/results", exist_ok=True)
+    gpx.save(f"./projects/{nome_projeto}/results/{nome_projeto}.gpx")
     
     # 5. Extração e Relatório dos Resultados Estatísticos
     resultados = hist.residuals
@@ -74,7 +75,7 @@ def refinamento_sequencial_oxidos(arquivo_drx, arquivo_inst, arquivo_cif, nome_p
     print("\n--- Resultados Finais ---")
     print(f"Fator wR (Desejável < 10%): {fator_rwp}%")
     print(f"Fator wRb: {fator_rwpb}%")
-    print(f"Projeto salvo com sucesso em: {nome_projeto}")
+    print(f"Projeto salvo com sucesso em: ./projects/{nome_projeto}/results/")
 
 # ==========================================
 # Exemplo de uso prático

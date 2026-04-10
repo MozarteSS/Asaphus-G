@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 from scipy.stats import pearsonr
 from pymatgen.core import Structure
 from pymatgen.analysis.diffraction.xrd import XRDCalculator
@@ -76,18 +77,17 @@ def primary_filter(input_file="minha_amostra_bancada.txt", ref_dir="ref/"):
     candidatos = listar_cif_para_dict(ref_dir)
 
     # 3. Simula XRD de cada CIF e compara com a amostra
-    ranking = {}
+    resultados = []
     for nome, arquivo_cif in candidatos.items():
         try:
             int_sim = simular_padrao_xrd(arquivo_cif, theta_amostra)
             ref_int_norm = (int_sim - int_sim.min()) / (int_sim.max() or 1.0)
 
             score, _ = pearsonr(amostra_int_norm, ref_int_norm)
-            ranking[nome] = score
+            resultados.append({"nome": nome, "score": score, "ref_int_norm": ref_int_norm})
         except Exception as e:
             print(f"Aviso: Não foi possível processar {nome}: {e}")
 
-    # 4. Exibe os resultados ordenados (do melhor para o pior)
-    print("--- RANKING DE FASES (Score de Similaridade) ---")
-    for nome, score in sorted(ranking.items(), key=lambda x: x[1], reverse=True):
-        print(f"{nome}: {score:.2%}")
+    # 4. Retorna DataFrame ordenado (do melhor para o pior)
+    df = pd.DataFrame(resultados).sort_values(by="score", ascending=False).reset_index(drop=True)
+    return df, amostra_int_norm, theta_amostra
