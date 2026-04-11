@@ -1,9 +1,9 @@
-# GSAS-II instrument parameter file - CuKa lab X-ray
+# GSAS-II instrument parameter file - Shimadzu XRD-7000 (DQ-UFMG)
 INS   BANK  1
 INS   HTYPE PXCR
 INS  1 IRAD 3
-INS  1 ICONS  1.54056   1.54433   0.00000         0.50000   0.00000         0.99000
-INS  1PRCF1    3    8      0.01
-INS  1PRCF11   0.100      -0.100       0.050
+INS  1 ICONS  1.54056   1.54439   0.00000         0.50000   0.00000         0.80000
+INS  1PRCF1    3    8    0.01
+INS  1PRCF11   0.020     -0.015       0.010
 INS  1PRCF12   0.000       0.000       0.000       0.002
-INS   1 W       0.01
+INS  1 SHFT    0.000

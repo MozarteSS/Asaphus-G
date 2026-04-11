@@ -1,7 +1,18 @@
-
-# cria os diretórios do projeto
 import os
-def dir_project(project_name):
+import time
+import logging
+import requests
+
+logger = logging.getLogger(__name__)
+
+COD_BASE_URL = "http://www.crystallography.net/cod"
+DOWNLOAD_TIMEOUT = 30   # segundos por tentativa
+MAX_RETRIES = 3
+RETRY_DELAY = 2         # segundos entre tentativas
+
+
+def dir_project(project_name: str) -> tuple[str, str]:
+    """Cria os diretórios do projeto e retorna (project_dir, ref_dir)."""
     path_ref = f"projects/{project_name}/ref"
     if not os.path.exists(path_ref):
         os.makedirs(path_ref)
@@ -9,14 +20,56 @@ def dir_project(project_name):
     return path_, path_ref
 
 
-# download ref xrd
-import requests
-def cif_download(name, cod_id, dir_ref):
-    url = f"http://www.crystallography.net/cod/{cod_id}.cif"
-    response = requests.get(url)
-    if response.status_code == 200:
-        with open(f"{dir_ref}/{name}.cif", "wb") as f:
-            f.write(response.content)
-        print(f"Arquivo COD {cod_id} baixado com sucesso!")
-    else:
-        print("Erro ao baixar o arquivo.")
+def _is_valid_cif(content: bytes) -> bool:
+    """Verifica se o conteúdo baixado é um CIF válido."""
+    try:
+        text = content.decode("utf-8", errors="ignore")
+        return "data_" in text and "_cell_length_a" in text
+    except Exception:
+        return False
+
+
+def cif_download(name: str, cod_id: int, dir_ref: str) -> bool:
+    """
+    Baixa um arquivo CIF do COD com timeout e retries automáticos.
+
+    Args:
+        name:    Nome da fase (usado como nome do arquivo .cif salvo).
+        cod_id:  ID numérico do COD (Crystallography Open Database).
+        dir_ref: Diretório de destino para o arquivo baixado.
+
+    Returns:
+        True se o download foi bem-sucedido, False caso contrário.
+    """
+    url = f"{COD_BASE_URL}/{cod_id}.cif"
+    dest = f"{dir_ref}/{name}.cif"
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = requests.get(url, timeout=DOWNLOAD_TIMEOUT)
+            if response.status_code == 200:
+                if not _is_valid_cif(response.content):
+                    logger.warning("COD %s (%s): conteúdo inválido — não é um CIF reconhecível.", cod_id, name)
+                    return False
+                with open(dest, "wb") as f:
+                    f.write(response.content)
+                logger.info("COD %s (%s): baixado com sucesso.", cod_id, name)
+                return True
+            else:
+                logger.warning(
+                    "COD %s (%s): HTTP %d (tentativa %d/%d).",
+                    cod_id, name, response.status_code, attempt, MAX_RETRIES,
+                )
+        except requests.exceptions.Timeout:
+            logger.warning("COD %s (%s): timeout (tentativa %d/%d).", cod_id, name, attempt, MAX_RETRIES)
+        except requests.exceptions.RequestException as e:
+            logger.warning(
+                "COD %s (%s): erro de rede — %s (tentativa %d/%d).",
+                cod_id, name, e, attempt, MAX_RETRIES,
+            )
+
+        if attempt < MAX_RETRIES:
+            time.sleep(RETRY_DELAY)
+
+    logger.error("COD %s (%s): falhou após %d tentativas.", cod_id, name, MAX_RETRIES)
+    return False
