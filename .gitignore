@@ -1,4 +1,5 @@
 .venv_gsas2/
+.claude/
 __pycache__/
 *.pyc
 *.gpx

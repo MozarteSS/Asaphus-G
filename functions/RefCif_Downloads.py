@@ -11,15 +11,6 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2         # segundos entre tentativas
 
 
-def dir_project(project_name: str) -> tuple[str, str]:
-    """Cria os diretórios do projeto e retorna (project_dir, ref_dir)."""
-    path_ref = f"projects/{project_name}/ref"
-    if not os.path.exists(path_ref):
-        os.makedirs(path_ref)
-    path_ = f"projects/{project_name}"
-    return path_, path_ref
-
-
 def _is_valid_cif(content: bytes) -> bool:
     """Verifica se o conteúdo baixado é um CIF válido."""
     try:

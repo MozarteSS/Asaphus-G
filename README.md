@@ -22,7 +22,7 @@ ReDifraX/
 │       ├── ref/                       # CIFs de referência baixados do COD
 │       └── results/                   # Projeto .gpx e resultados do refinamento
 └── functions/
-    ├── Diretories_Downloads.py        # Criação de diretórios e download de CIFs
+    ├── RefCif_Downloads.py        # Criação de diretórios e download de CIFs
     ├── Primary_Filter.py              # Simulação XRD e ranking por correlação
     └── Workflow_GSAS2.py              # Refinamento de Rietveld via GSAS-II
 ```
