@@ -1,7 +1,7 @@
 # Asaphus-G
-## *A*utomated *S*tructural *A*nalysis *P*ython for GSAS-II
+## Automated Structural Analysis Python for GSAS-II
 
-
+The name Asaphus-G is not merely an acronym for Automated Structural Analysis Python for GSAS; it is a tribute to the genus *Asaphus*, one of the most iconic groups of trilobites that inhabited the oceans during the Ordovician period, between 485 and 443 million years ago.
 
 
 ## Sobre
@@ -30,6 +30,7 @@ ASAP-G/
     ├── Primary_Filter.py              # Simulação XRD e ranking por correlação
     └── Workflow_GSAS2.py              # Refinamento de Rietveld via GSAS-II
 ```
+
 
 ## Instalacao do ambiente
 
