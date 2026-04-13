@@ -1,4 +1,4 @@
-![Capa do Projeto](asaphus.jpg)
+![Capa do Projeto](asaphus.png)
 
 # Asaphus-G
 ## Automated Structural Analysis Python (Hybrid User Script) for GSAS-II
