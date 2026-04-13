@@ -1,7 +1,9 @@
-# Asaphus-G
-## Automated Structural Analysis Python for GSAS-II
+![Capa do Projeto](asaphus.jpg)
 
-The name Asaphus-G is not merely an acronym for Automated Structural Analysis Python for GSAS; it is a tribute to the genus *Asaphus*, one of the most iconic groups of trilobites that inhabited the oceans during the Ordovician period, between 485 and 443 million years ago.
+# Asaphus-G
+## Automated Structural Analysis Python (Hybrid User Script) for GSAS-II
+
+The name Asaphus-G is not merely an acronym for Automated Structural Analysis Python (Hybrid User Script) for GSAS-II; it is a tribute to the genus *Asaphus*, one of the most iconic groups of trilobites that inhabited the oceans during the Ordovician period, between 485 and 443 million years ago.
 
 
 ## Sobre

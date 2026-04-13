@@ -1,126 +1,137 @@
-import os
 import sys
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 # Adiciona o caminho do GSAS-II ao sys.path automaticamente
-_gsas2_path = os.path.join(os.path.dirname(__file__), os.pardir, ".venv_gsas2", "GSAS-II")
-_gsas2_path = os.path.abspath(_gsas2_path)
-if _gsas2_path not in sys.path:
-    sys.path.insert(0, _gsas2_path)
+_gsas2_path = (Path(__file__).parent.parent / ".venv_gsas2" / "GSAS-II").resolve()
+if str(_gsas2_path) not in sys.path:
+    sys.path.insert(0, str(_gsas2_path))
 
 try:
     from GSASII import GSASIIscriptable as G2sc
-except ImportError:
-    logger.error("GSASIIscriptable não encontrado. Caminho verificado: %s", _gsas2_path)
-    sys.exit(1)
+except ImportError as e:
+    raise ImportError(
+        f"GSASIIscriptable não encontrado. Caminho verificado: {_gsas2_path}"
+    ) from e
 
 
-def refinamento_sequencial_oxidos(
-    arquivo_drx: str,
-    arquivo_inst: str,
-    arquivo_cif: str | list[str],
-    nome_projeto: str,
-    refinar_atomos: bool = True,
-) -> dict:
+def executar_refinamento_com_config(config: dict) -> dict:
     """
-    Executa o workflow de refinamento de Rietveld passo a passo via GSAS-II.
-
-    Aceita uma ou mais fases (arquivo_cif pode ser string ou lista de strings).
-    Calcula o percentual de cada fase ao final.
+    Executa o workflow de refinamento de Rietveld via GSAS-II a partir de um dicionário
+    de configuração.
 
     Args:
-        arquivo_drx:    Caminho para o arquivo de dados XRD (.txt, formato RRUFF).
-        arquivo_inst:   Caminho para o arquivo de parâmetros do difratômetro (.prm).
-        arquivo_cif:    Caminho(s) para o(s) arquivo(s) CIF das fases a refinar.
-        nome_projeto:   Nome do projeto (usado para nomear arquivos de saída).
-        refinar_atomos: Se True (padrão), executa o Passo 5 de refinamento de posições
-                        atômicas. Desative para dados de baixa qualidade onde este passo
-                        pode divergir.
+        config: Dicionário com três sub-dicionários obrigatórios:
+
+            "projeto": {
+                "nome":      str  — nome do projeto (usado para nomear arquivos de saída),
+                "drx_path":  str  — caminho para o arquivo XRD (.txt, formato RRUFF),
+                "inst_path": str  — caminho para o arquivo de parâmetros do difratômetro (.instprm),
+                "cif_paths": list[str]  — lista de caminhos para os arquivos CIF das fases,
+            }
+
+            "workflow": {
+                "refinar_background":  bool  — refina o fundo (polinômio),
+                "refinar_escala":      bool  — refina a escala global,
+                "refinar_deslocamento": bool  — refina o deslocamento da amostra (DisplaceX, DisplaceY),
+                "refinar_rede":        bool  — refina os parâmetros de rede (célula unitária),
+                "refinar_perfil":      bool  — refina o perfil de pico (tamanho e microstrain),
+                "refinar_atomos": {
+                    "ativar": bool        — ativa o refinamento de átomos,
+                    "etapas": list[str]   — sequência de flags GSAS-II, ex: ["X", "XU"],
+                },
+            }
+
+            "ajustes_tecnicos": {
+                "max_cycles":      int  — número máximo de ciclos por etapa,
+                "size_model":      str  — modelo de tamanho de cristalito, ex: "isotropic",
+                "mustrain_model":  str  — modelo de microstrain, ex: "isotropic",
+            }
 
     Returns:
-        Dicionário com dados de plotagem (x, yobs, ycalc, ybkg, diff),
-        fatores de qualidade (wR, wRb) e percentuais de fase.
+        Dicionário com:
+            x, yobs, ycalc, ybkg, diff — arrays de dados para plotagem,
+            wR, wRb                    — fatores de qualidade do refinamento,
+            percentuais_fases          — dict {nome_fase: %} ou None se não disponível.
     """
-    logger.info("--- Iniciando Projeto: %s ---", nome_projeto)
+    p = config["projeto"]
+    w = config["workflow"]
+    t = config["ajustes_tecnicos"]
 
-    # 1. Cria o projeto do GSAS-II (.gpx) no diretório de resultados
-    results_dir = f"./projects/{nome_projeto}/results"
-    os.makedirs(results_dir, exist_ok=True)
-    gpx = G2sc.G2Project(newgpx=f"{results_dir}/{nome_projeto}")
+    logger.info("--- Iniciando Projeto: %s ---", p["nome"])
 
-    # 2. Carrega os dados (espectro XRD e parâmetros do difratômetro)
-    hist = gpx.add_powder_histogram(arquivo_drx, arquivo_inst)
+    # Setup de caminhos
+    base_dir = Path("./projects") / p["nome"] / "results"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    gpx = G2sc.G2Project(newgpx=str(base_dir / p["nome"]))
 
-    # 3. Carrega as fases estruturais
-    arquivos_cif = [arquivo_cif] if isinstance(arquivo_cif, str) else arquivo_cif
-    fases = []
-    for cif in arquivos_cif:
-        nome_fase = os.path.splitext(os.path.basename(cif))[0]
-        fase = gpx.add_phase(cif, phasename=nome_fase, histograms=[hist])
-        fases.append(fase)
+    # Adiciona histograma e fases
+    hist = gpx.add_powder_histogram(p["drx_path"], p["inst_path"])
+    for cif in p["cif_paths"]:
+        gpx.add_phase(cif, phasename=Path(cif).stem, histograms=[hist])
 
-    # --- INÍCIO DO WORKFLOW DE REFINAMENTO ---
+    # --- Execução Condicional do Workflow ---
 
-    # Passo 1: Escala e Background
-    # Alinha a altura geral do gráfico e ajusta o ruído de fundo (polinômio).
-    logger.info("Passo 1: Refinando Escala e Background...")
-    gpx.do_refinements([{"set": {"Background": True, "Scale": True}}])
+    # Passo 1: Background e Escala
+    if w["refinar_background"] or w["refinar_escala"]:
+        logger.info("Passo 1: Refinando Background e Escala...")
+        gpx.do_refinements([{"set": {
+            "Background": w["refinar_background"],
+            "Scale": w["refinar_escala"],
+        }, "cycles": t["max_cycles"]}])
 
-    # Passo 2: Deslocamento da Amostra (Zero-shift)
-    # Alinha a posição horizontal dos picos (corrige altura da amostra no porta-amostras).
-    logger.info("Passo 2: Refinando Deslocamento da Amostra (Sample Displacement)...")
-    gpx.do_refinements([{"set": {"Sample Parameters": ["DisplaceX", "DisplaceY"]}}])
+    # Passo 2: Deslocamento da Amostra
+    if w["refinar_deslocamento"]:
+        logger.info("Passo 2: Refinando Deslocamento da Amostra...")
+        gpx.do_refinements([{"set": {
+            "Sample Parameters": ["DisplaceX", "DisplaceY"],
+        }, "cycles": t["max_cycles"]}])
 
-    # Passo 3: Parâmetros de Rede (Célula Unitária)
-    # Ajusta o tamanho da célula a, b, c. Essencial para acomodar substituições iônicas.
-    logger.info("Passo 3: Refinando Parâmetros de Rede (Cell)...")
-    gpx.do_refinements([{"set": {"Cell": True}}])
+    # Passo 3: Parâmetros de Rede
+    if w["refinar_rede"]:
+        logger.info("Passo 3: Refinando Parâmetros de Rede...")
+        gpx.do_refinements([{"set": {"Cell": True}, "cycles": t["max_cycles"]}])
 
-    # Passo 4: Perfil de Pico (Tamanho de Cristalito e Microdeformação)
-    # Ajusta o alargamento dos picos. Crucial para nanomateriais.
-    logger.info("Passo 4: Refinando Perfil (Tamanho e Microstrain)...")
-    gpx.do_refinements([{"set": {
-        "Size": {"type": "isotropic", "refine": True},
-        "Mustrain": {"type": "isotropic", "refine": True},
-    }}])
+    # Passo 4: Perfil de Pico
+    if w["refinar_perfil"]:
+        logger.info("Passo 4: Refinando Perfil (Tamanho e Microstrain)...")
+        gpx.do_refinements([{"set": {
+            "Size": {"type": t["size_model"], "refine": True},
+            "Mustrain": {"type": t["mustrain_model"], "refine": True},
+        }, "cycles": t["max_cycles"]}])
 
-    # Passo 5: Parâmetros Estruturais (Coordenadas Atômicas)
-    # O passo mais sensível — move os átomos dentro da célula.
-    # Use refinar_atomos=False se a qualidade do XRD for baixa.
-    if refinar_atomos:
-        logger.info("Passo 5: Refinando Posições Atômicas...")
-        gpx.do_refinements([{"set": {"Atoms": {"all": "XU"}}}])
-    else:
-        logger.info("Passo 5: Refinamento de posições atômicas pulado (refinar_atomos=False).")
+    # Passo 5: Átomos (sequência de etapas definida no dicionário)
+    if w["refinar_atomos"]["ativar"]:
+        for etapa in w["refinar_atomos"]["etapas"]:
+            logger.info("Passo 5: Refinando átomos — etapa '%s'...", etapa)
+            gpx.do_refinements([{"set": {"Atoms": {"all": etapa}}, "cycles": t["max_cycles"]}])
 
     # --- FIM DO WORKFLOW ---
 
-    # 4. Salva o projeto final
     gpx.save()
 
-    # 5. Extração dos fatores de qualidade
+    # Extração dos fatores de qualidade
     resultados = hist.residuals
-    fator_rwp = resultados.get('wR', 'N/A')
-    fator_rwpb = resultados.get('wRb', 'N/A')
+    fator_rwp = resultados.get("wR", "N/A")
+    fator_rwpb = resultados.get("wRb", "N/A")
 
     logger.info("--- Resultados Finais ---")
     logger.info("Fator wR (Desejável < 10%%): %s%%", fator_rwp)
     logger.info("Fator wRb: %s%%", fator_rwpb)
-    logger.info("Projeto salvo em: %s/", results_dir)
+    logger.info("Projeto salvo em: %s/", base_dir)
 
-    # 6. Calcula o percentual de cada fase
+    # Calcula o percentual de cada fase
     wt_fracs = None
     try:
-        wt_fracs = gpx.get_wt_fractions(hist)
+        wt_fracs = hist.ComputeMassFracs()
         logger.info("Percentual de cada fase na amostra:")
-        for fase_nome, wt in wt_fracs.items():
-            logger.info("  %s: %.2f%%", fase_nome, wt)
+        for fase_nome, (val, su) in wt_fracs.items():
+            logger.info("  %s: %.2f%% ± %.2f%%", fase_nome, val * 100, su * 100)
     except Exception as e:
         logger.warning("Não foi possível calcular o percentual das fases: %s", e)
 
-    # 7. Retorna dados para plotagem e percentuais
     return {
         "x": hist.getdata("X"),
         "yobs": hist.getdata("Yobs"),
@@ -137,10 +148,30 @@ def refinamento_sequencial_oxidos(
 # Exemplo de uso prático
 # ==========================================
 if __name__ == "__main__":
-    DRX_LAB = "amostra_oxido_01.txt"
-    INST_PRM = "difratometro_lab.instprm"
-    CIF_REF = "hematita_referencia.cif"
-    PROJETO = "analise_hematita"
+    config_exemplo = {
+        "projeto": {
+            "nome": "analise_hematita",
+            "drx_path": "amostra_oxido_01.txt",
+            "inst_path": "difratometro_lab.instprm",
+            "cif_paths": ["hematita_referencia.cif"],
+        },
+        "workflow": {
+            "refinar_background": True,
+            "refinar_escala": True,
+            "refinar_deslocamento": True,
+            "refinar_rede": True,
+            "refinar_perfil": True,
+            "refinar_atomos": {
+                "ativar": True,
+                "etapas": ["X", "XU"],
+            },
+        },
+        "ajustes_tecnicos": {
+            "max_cycles": 10,
+            "size_model": "isotropic",
+            "mustrain_model": "isotropic",
+        },
+    }
 
     # Descomente para executar com os arquivos reais:
-    # refinamento_sequencial_oxidos(DRX_LAB, INST_PRM, CIF_REF, PROJETO)
+    # resultado = executar_refinamento_com_config(config_exemplo)
