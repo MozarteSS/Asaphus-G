@@ -1,5 +1,5 @@
 # Asaphus-G
-## **A**utomated **S**tructural **A**nalysis **P**ython for GSAS-II
+## *A*utomated *S*tructural *A*nalysis *P*ython for GSAS-II
 
 
 
