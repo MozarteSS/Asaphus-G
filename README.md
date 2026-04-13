@@ -1,4 +1,8 @@
-# ReDifraX
+# Asaphus-G
+## **A**utomated **S**tructural **A**nalysis **P**ython for GSAS-II
+
+
+
 
 ## Sobre
 
@@ -13,7 +17,7 @@ Pipeline de análise de difração de raios X (XRD) que automatiza:
 ### Estrutura do projeto
 
 ```
-ReDifraX/
+ASAP-G/
 ├── run.ipynb                          # Notebook principal de execução
 ├── requirements.txt                   # Dependências Python extras
 ├── inputs/                            # Dados experimentais (.txt, .prm)
@@ -34,8 +38,8 @@ O projeto usa um unico ambiente (`.venv_gsas2`) que contem o GSAS-II e todas as 
 ### 1. Clonar o repositorio
 
 ```bash
-git clone https://github.com/MozarteSS/ReDifraX
-cd ReDifraX
+git clone https://github.com/MozarteSS/ASAP-G
+cd ASAP-G
 ```
 
 ### 2. Pre-requisitos
