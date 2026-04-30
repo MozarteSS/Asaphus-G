@@ -87,21 +87,23 @@ def plot_refinamento_com_referencias(
     ycalc: np.ndarray,
     refs_cif: list[str],
     theta: np.ndarray,
+    nome_projeto: str = "",
 ) -> None:
     """
     Plota o refinamento calculado junto com as curvas referenciais simuladas.
 
     Args:
-        x:        Array de ângulos 2θ do refinamento.
-        yobs:     Intensidade observada (experimental).
-        ycalc:    Intensidade calculada pelo refinamento.
-        refs_cif: Lista de caminhos para os CIFs usados no refinamento.
-        theta:    Grid de ângulos 2θ da amostra original (para simulação dos CIFs).
+        x:             Array de ângulos 2θ do refinamento.
+        yobs:          Intensidade observada (experimental).
+        ycalc:         Intensidade calculada pelo refinamento.
+        refs_cif:      Lista de caminhos para os CIFs usados no refinamento.
+        theta:         Grid de ângulos 2θ da amostra original (para simulação dos CIFs).
+        nome_projeto:  Nome do projeto exibido no título do gráfico.
     """
     yobs_norm = normalizar(yobs)
     ycalc_norm = normalizar(ycalc)
 
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(10, 6))
     plt.plot(x, yobs_norm, "k-", label="Observado", linewidth=0.8)
     plt.plot(x, ycalc_norm, "r-", label="Calculado (Rietveld)", linewidth=0.8)
 
@@ -116,7 +118,8 @@ def plot_refinamento_com_referencias(
 
     plt.xlabel("2θ (°)")
     plt.ylabel("Intensidade Normalizada")
-    plt.title("Refinamento de Rietveld e Referências")
+    titulo = f"Refinamento de Rietveld e Referências — {nome_projeto}" if nome_projeto else "Refinamento de Rietveld e Referências"
+    plt.title(titulo)
     plt.legend()
     plt.tight_layout()
     plt.show()
