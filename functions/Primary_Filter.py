@@ -59,7 +59,7 @@ def carregar_amostra(input_file: str) -> tuple[np.ndarray, np.ndarray]:
             linha = linha.strip()
             if not linha or linha.startswith('##'):
                 continue
-            partes = linha.split(',')
+            partes = linha.split(',') if ',' in linha else linha.split()
             if len(partes) == 2:
                 try:
                     theta.append(float(partes[0]))
