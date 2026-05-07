@@ -47,7 +47,7 @@ def plot_filtro_primario(
 
 def plot_rietveld(resultado: dict) -> None:
     """
-    Plota o resultado do refinamento de Rietveld: observado vs calculado + curva de resíduo.
+    Plota o resultado do refinamento de Rietveld: Experimental vs calculado + curva de resíduo.
 
     Args:
         resultado: Dicionário retornado por refinamento_sequencial_oxidos(),
@@ -66,7 +66,7 @@ def plot_rietveld(resultado: dict) -> None:
         gridspec_kw={"hspace": 0.05},
     )
 
-    ax1.plot(x, yobs, "k-", label="Observado", linewidth=0.6)
+    ax1.plot(x, yobs, "k-", label="Experimental", linewidth=0.6)
     ax1.plot(x, ycalc, "r-", label="Calculado", linewidth=0.6)
     ax1.set_ylabel("Intensidade")
     ax1.set_title(f"Refinamento de Rietveld — wR = {wR:.2f}%")
@@ -88,6 +88,7 @@ def plot_refinamento_com_referencias(
     refs_cif: list[str],
     theta: np.ndarray,
     nome_projeto: str = "",
+    save_path: Path | str | None = None,
 ) -> None:
     """
     Plota o refinamento calculado junto com as curvas referenciais simuladas.
@@ -99,27 +100,38 @@ def plot_refinamento_com_referencias(
         refs_cif:      Lista de caminhos para os CIFs usados no refinamento.
         theta:         Grid de ângulos 2θ da amostra original (para simulação dos CIFs).
         nome_projeto:  Nome do projeto exibido no título do gráfico.
+        save_path:     Diretório onde a imagem será salva (PNG). Se None, não salva.
     """
     yobs_norm = normalizar(yobs)
     ycalc_norm = normalizar(ycalc)
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(x, yobs_norm, "k-", label="Observado", linewidth=0.8)
-    plt.plot(x, ycalc_norm, "r-", label="Calculado (Rietveld)", linewidth=0.8)
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(x, yobs_norm, "k-", label="Experimental", linewidth=0.8)
+    ax.plot(x, ycalc_norm, "r-", label="Calculado (Rietveld)", linewidth=0.8)
 
     for ref_cif in refs_cif:
         nome_fase = Path(ref_cif).stem
         try:
             yref = simular_padrao_xrd(ref_cif, theta)
             yref_norm = normalizar(yref)
-            plt.plot(theta, yref_norm, "--", label=f"Referência: {nome_fase}", alpha=0.7)
+            ax.plot(theta, yref_norm, "--", label=f"Referência: {nome_fase}", alpha=0.7)
         except Exception as e:
             logger.warning("Erro ao simular referência %s: %s", nome_fase, e)
 
-    plt.xlabel("2θ (°)")
-    plt.ylabel("Intensidade Normalizada")
+    ax.set_xlabel("2θ (°)")
+    ax.set_ylabel("Intensidade Normalizada")
     titulo = f"Refinamento de Rietveld e Referências — {nome_projeto}" if nome_projeto else "Refinamento de Rietveld e Referências"
-    plt.title(titulo)
-    plt.legend()
-    plt.tight_layout()
+    ax.set_title(titulo)
+    ax.legend()
+    fig.tight_layout()
+
+    if save_path is not None:
+        save_path = Path(save_path)
+        save_path.mkdir(parents=True, exist_ok=True)
+        prefix = f"{nome_projeto}_" if nome_projeto else ""
+        img_file = save_path / f"{prefix}refinamento_com_referencias.png"
+        fig.savefig(img_file, dpi=150, bbox_inches="tight")
+        logger.info("Gráfico salvo em %s", img_file)
+
     plt.show()
+    plt.close(fig)
