@@ -4,6 +4,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.signal import find_peaks
 
 from functions.Primary_Filter import normalizar, simular_padrao_xrd
 
@@ -18,6 +19,19 @@ COR_EXPERIMENTAL = "#130909"
 COR_CALCULADO = "#e03b3b"
 COR_DIFERENCA = "#037a09"
 COR_REFERENCIA = "#0c2cdf"
+
+
+def _marcar_picos(
+    ax: plt.Axes,
+    x: np.ndarray,
+    y: np.ndarray,
+    color: str,
+    prominence: float = 0.05,
+    markersize: int = 6,
+) -> None:
+    peaks, _ = find_peaks(y, prominence=prominence)
+    if len(peaks):
+        ax.scatter(x[peaks], y[peaks], color=color, s=markersize ** 2, zorder=5, linewidths=0)
 
 
 def _save_figure(fig: plt.Figure, save_path: Path | str, nome_projeto: str, suffix: str) -> None:
@@ -51,11 +65,13 @@ def plot_filtro_primario(
 
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.plot(theta, amostra_norm, label="Amostra (experimental)", linewidth=1.2, color=COR_EXPERIMENTAL)
+        _marcar_picos(ax, theta, amostra_norm, COR_EXPERIMENTAL)
         ax.plot(
             theta, ref_int_norm,
             label=f"Referência: {nome} (score={score:.2%})",
             linewidth=1.2, alpha=0.8, color=COR_REFERENCIA,
         )
+        _marcar_picos(ax, theta, ref_int_norm, COR_REFERENCIA)
         ax.set_xlabel("2θ (°)", fontsize=xlabel_fontsize)
         ax.set_ylabel("Intensidade Normalizada", fontsize=ylabel_fontsize)
         ax.set_title("XRD: Amostra vs Melhor Referência", fontsize=title_fontsize)
@@ -101,6 +117,7 @@ def plot_rietveld(
 
     ax1.plot(x, yobs, "-", label="Experimental", linewidth=1.1, color=COR_EXPERIMENTAL)
     ax1.plot(x, ycalc, "-", label="Calculado", linewidth=1.1, color=COR_CALCULADO)
+    _marcar_picos(ax1, x, ycalc, COR_CALCULADO)
 
     if refs_cif and theta is not None:
         for ref_cif in refs_cif:
@@ -109,6 +126,7 @@ def plot_rietveld(
                 yref = simular_padrao_xrd(ref_cif, theta)
                 yref_norm = normalizar(yref)
                 ax1.plot(theta, yref_norm, "--", label=f"Referência: {nome_fase}", alpha=0.7, color=COR_REFERENCIA)
+                _marcar_picos(ax1, theta, yref_norm, COR_REFERENCIA)
             except Exception as e:
                 logger.warning("Erro ao simular referência %s: %s", nome_fase, e)
 
@@ -168,7 +186,8 @@ def plot_refinamento_com_referencias(
     )
 
     ax1.plot(x, yobs_norm, "-", label="Experimental", linewidth=1.2, color=COR_EXPERIMENTAL)
-    ax1.plot(x, ycalc_norm, "-", label="Calculated (Rietveld)", linewidth=1.2, color=COR_CALCULADO)
+    ax1.plot(x, ycalc_norm, "-", label="Calculated (Rietveld)", linewidth=1.5, color=COR_CALCULADO)
+    _marcar_picos(ax1, x, ycalc_norm, COR_CALCULADO)
 
     for ref_cif in refs_cif:
         nome_fase = Path(ref_cif).stem
@@ -176,6 +195,7 @@ def plot_refinamento_com_referencias(
             yref = simular_padrao_xrd(ref_cif, theta)
             yref_norm = normalizar(yref)
             ax1.plot(theta, yref_norm, "--", label=f"Reference: {nome_fase}", alpha=0.7, color=COR_REFERENCIA)
+            _marcar_picos(ax1, theta, yref_norm, COR_REFERENCIA)
         except Exception as e:
             logger.warning("Erro ao simular referência %s: %s", nome_fase, e)
 
