@@ -7,5 +7,5 @@ __pycache__/
 *.lst
 projects/
 #inputs/
-my_inputs/
-titulo.txt
+#my_inputs/
+#meu_input/
