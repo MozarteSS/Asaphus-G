@@ -16,8 +16,8 @@ ylabel_fontsize = 14
 tick_labelsize = 14
 
 COR_EXPERIMENTAL = "#130909"
-COR_CALCULADO = "#e03b3b"
-COR_DIFERENCA = "#037a09"
+COR_CALCULADO = "#e41616"
+COR_DIFERENCA = "#287707"
 COR_REFERENCIA = "#0c2cdf"
 
 
@@ -27,7 +27,7 @@ def _marcar_picos(
     y: np.ndarray,
     color: str,
     prominence: float = 0.05,
-    markersize: int = 6,
+    markersize: int = 8,
 ) -> None:
     peaks, _ = find_peaks(y, prominence=prominence)
     if len(peaks):
@@ -185,8 +185,8 @@ def plot_refinamento_com_referencias(
         gridspec_kw={"hspace": 0.05},
     )
 
-    ax1.plot(x, yobs_norm, "-", label="Experimental", linewidth=1.2, color=COR_EXPERIMENTAL)
-    ax1.plot(x, ycalc_norm, "-", label="Calculated (Rietveld)", linewidth=1.5, color=COR_CALCULADO)
+    ax1.plot(x, yobs_norm, "-", label="Experimental", linewidth=2.5, color=COR_EXPERIMENTAL)
+    ax1.plot(x, ycalc_norm, "-", label="Calculated (Rietveld)", linewidth=1.75, color=COR_CALCULADO)
     _marcar_picos(ax1, x, ycalc_norm, COR_CALCULADO)
 
     for ref_cif in refs_cif:
@@ -194,7 +194,7 @@ def plot_refinamento_com_referencias(
         try:
             yref = simular_padrao_xrd(ref_cif, theta)
             yref_norm = normalizar(yref)
-            ax1.plot(theta, yref_norm, "--", label=f"Reference: {nome_fase}", alpha=0.7, color=COR_REFERENCIA)
+            ax1.plot(theta, yref_norm, "--", label=f"Reference: {nome_fase}", linewidth=1.75, alpha=0.7, color=COR_REFERENCIA)
             _marcar_picos(ax1, theta, yref_norm, COR_REFERENCIA)
         except Exception as e:
             logger.warning("Erro ao simular referência %s: %s", nome_fase, e)
@@ -205,8 +205,8 @@ def plot_refinamento_com_referencias(
     ax1.tick_params(axis="both", labelsize=tick_labelsize)
     ax1.legend()
 
-    ax2.plot(x, diff, "-", linewidth=0.5, color=COR_DIFERENCA)
-    ax2.axhline(np.median(diff), color="gray", linewidth=0.5, linestyle="--")
+    ax2.plot(x, diff, "-", linewidth=1.5, color=COR_DIFERENCA)
+    ax2.axhline(np.median(diff), color="gray", linewidth=1.5, linestyle="--")
     if diff_ylim is not None:
         ax2.set_ylim(diff_ylim)
     ax2.set_xlabel("2θ (°)", fontsize=xlabel_fontsize)
