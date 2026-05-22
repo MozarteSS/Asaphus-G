@@ -19,17 +19,21 @@ Pipeline de análise de difração de raios X (XRD) que automatiza:
 ### Estrutura do projeto
 
 ```
-ASAP-G/
+ASAPHUS-G/
 ├── run.ipynb                          # Notebook principal de execução
 ├── requirements.txt                   # Dependências Python extras
-├── inputs/                            # Dados experimentais (.txt, .prm)
+├── meu_input/                         # Dados experimentais (.scn, .instprm)
+├── inputs/                            # Dados de referência (.txt, .prm)
 ├── projects/                          # Projetos criados em tempo de execução
 │   └── <nome>/
 │       ├── ref/                       # CIFs de referência baixados do COD
-│       └── results/                   # Projeto .gpx e resultados do refinamento
+│       └── results/                   # Projeto .gpx, .lst e resultados
 └── functions/
-    ├── RefCif_Downloads.py        # Criação de diretórios e download de CIFs
+    ├── config.py                      # Configuração de caminhos (ProjectConfig)
+    ├── RefCif_Downloads.py            # Download de CIFs do COD
     ├── Primary_Filter.py              # Simulação XRD e ranking por correlação
+    ├── Extraction_Phases.py           # Extração de frações de fase do .lst
+    ├── GSAS_Plots.py                  # Plots do refinamento de Rietveld
     └── Workflow_GSAS2.py              # Refinamento de Rietveld via GSAS-II
 ```
 
@@ -78,12 +82,12 @@ pip install -r requirements.txt
 source .venv_gsas2/bin/activate
 python --version
 PYTHONPATH="./.venv_gsas2/GSAS-II" python -c "from GSASII.GSASIIscriptable import G2Project; print('GSAS-II OK')"
-python -c "import pandas; import scipy; print('pandas/scipy OK')"
+python -c "import pandas; import scipy; import matplotlib; import openpyxl; print('dependencias OK')"
 ```
 
 ### 6. Executar
 
-Coloque seu difratograma experimental (formato RRUFF: `2θ, intensidade`) na pasta `inputs/` e execute o notebook:
+Coloque seu difratograma experimental (formato RRUFF: `2θ, intensidade`) e o arquivo de parâmetros do instrumento (`.instprm`) na pasta `meu_input/` e execute o notebook:
 
 ```bash
 source .venv_gsas2/bin/activate
@@ -92,9 +96,12 @@ jupyter notebook run.ipynb
 
 O notebook segue o fluxo:
 
-1. Cria o diretório do projeto (`projects/<nome>/ref/`).
-2. Baixa CIFs de referência do COD (hematita, magnetita, maghemita, goethita, wüstita, ferro metálico).
-3. Executa o filtro primário e exibe o ranking de similaridade.
+1. Cria o diretório do projeto (`projects/<nome>/ref/` e `results/`).
+2. Baixa CIFs de referência do COD (hematita, magnetita, maghemita, goethita, wüstita, cementita, ferro metálico).
+3. Executa o filtro primário e exibe o ranking de similaridade por correlação de Pearson.
 4. Plota o difratograma experimental sobreposto à melhor referência.
 5. Executa o refinamento de Rietveld via GSAS-II e salva o projeto `.gpx` em `projects/<nome>/results/`.
 6. Reporta os fatores de qualidade wR e wRb.
+7. Extrai automaticamente as frações de fase (phase/weight fraction) do arquivo `.lst`.
+8. Plota o refinamento de Rietveld com sobreposição das referências individuais.
+9. Exporta todos os dados dos gráficos e frações de fase para um arquivo `.xlsx`.

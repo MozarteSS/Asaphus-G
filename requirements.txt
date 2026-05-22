@@ -3,6 +3,8 @@ pandas
 pymatgen
 requests
 scipy
+matplotlib
+openpyxl
 
 # GSAS-II ja vem instalado no ambiente (via buildtools).
 # Estas sao as dependencias extras instaladas via pip.
