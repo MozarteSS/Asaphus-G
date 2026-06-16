@@ -6,5 +6,6 @@ __pycache__/
 *.bak*
 *.lst
 projects/
-#inputs/
-#meu_input/
+inputs/
+meu_input/
+projects/
